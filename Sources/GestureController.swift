@@ -28,9 +28,12 @@ final class GestureController {
         Float(min(max((UserDefaults.standard.object(forKey: "stepTravel") as? Double) ?? 0.05, 0.02), 0.12))
     }
     private let typingGuard: TimeInterval = 0.6  // ignore gestures right after a keystroke
+    private let settle: TimeInterval = 0.045     // finger must be alone this long before firing
 
     // start = cross-axis position at arm (wander check); anchor = slide-axis position.
-    private struct Track { var id: Int32; var zone: Zone; var start: Float; var anchor: Float }
+    private struct Track { var id: Int32; var zone: Zone; var start: Float; var anchor: Float; var armTime: TimeInterval }
+    // true once 2+ fingers seen this contact -> stays disqualified until ALL lift.
+    private var multiLatch = false
     private var cursorFrozen = false
     private var frozenAt = CGPoint.zero
     private var active: Track? {
@@ -75,19 +78,29 @@ final class GestureController {
             if debug { NSLog("VERGE bail: typing guard") }; active = nil; return
         }
 
-        // Single-finger edge slide only. Scroll/pinch/swipe/3-finger all put 2+
-        // contacts down -> we bail, so they never trigger anything.
-        let touching = touches.filter { $0.state == MT_STATE_TOUCHING }
-        guard touching.count == 1, let t = touching.first else {
-            if debug && !touches.isEmpty {
-                let st = touches.map { String($0.state) }.joined(separator: ",")
-                NSLog("VERGE bail: touching=%d (n=%d states=[%@])", touching.count, touches.count, st)
-            }
-            active = nil; return
+        // Single-finger edge slide only. Count the WHOLE contact lifecycle
+        // (make/touch/break/linger = states 3..6), not just fully-touching(4):
+        // during a scroll/pinch a second finger is in state 3 or 6 on the very
+        // frames the first reads 4, so a state==4-only count would see just one
+        // and arm. Counting 3..6 catches the second finger the instant it lands.
+        let contacts = touches.filter { $0.state >= 3 && $0.state <= 6 }
+        if contacts.isEmpty {           // everything lifted -> reset the latch
+            if multiLatch && debug { NSLog("VERGE latch cleared") }
+            multiLatch = false; active = nil; return
         }
+        if contacts.count > 1 {         // scroll / pinch / swipe / 3-finger
+            if !multiLatch && debug { NSLog("VERGE latch: %d contacts", contacts.count) }
+            multiLatch = true; active = nil; return
+        }
+        // one contact — but if this gesture was EVER multi-finger, stay dead
+        // until a full lift, so a scroll that flickers to 1 finger can't sneak in.
+        if multiLatch { active = nil; return }
+        let t = contacts[0]
+        guard t.state == MT_STATE_TOUCHING else { active = nil; return }  // acting finger fully down
 
         let x = t.normalized.position.x
         let y = t.normalized.position.y
+        let nowT = CACurrentMediaTime()
 
         if var tr = active, tr.id == t.identifier {
             if cursorFrozen { CGWarpMouseCursorPosition(frozenAt) }  // pin cursor each frame
@@ -104,8 +117,17 @@ final class GestureController {
                 if debug { NSLog("VERGE cancel: nearEdge=%d wander=%.3f", nearEdge ? 1 : 0, abs(cross - tr.start)) }
                 active = nil; return
             }
-            let step = self.step   // snapshot: keep notches() and anchor advance consistent
             let pos = vertical ? y : x
+            // Settle: hold off firing until the finger has been alone `settle`
+            // seconds. A scroll/pinch's second finger lands inside this window and
+            // trips the latch above, so it never gets here. Re-anchor while settling
+            // so post-settle notches count from the settled position (no jump).
+            if nowT - tr.armTime < settle {
+                tr.anchor = pos
+                active = tr
+                return
+            }
+            let step = self.step   // snapshot: keep notches() and anchor advance consistent
             let n = notches(dy: pos - tr.anchor, step: step)
             if n != 0 {
                 let up = n > 0
@@ -116,13 +138,13 @@ final class GestureController {
             }
         } else if x < edge {
             if debug { NSLog("VERGE ARM left x=%.3f edge=%.3f", x, edge) }
-            active = Track(id: t.identifier, zone: .left, start: x, anchor: y)
+            active = Track(id: t.identifier, zone: .left, start: x, anchor: y, armTime: nowT)
         } else if x > (1 - edge) {
             if debug { NSLog("VERGE ARM right x=%.3f edge=%.3f", x, edge) }
-            active = Track(id: t.identifier, zone: .right, start: x, anchor: y)
+            active = Track(id: t.identifier, zone: .right, start: x, anchor: y, armTime: nowT)
         } else if topScrub && y > (1 - edge) {
             if debug { NSLog("VERGE ARM top y=%.3f", y) }
-            active = Track(id: t.identifier, zone: .top, start: y, anchor: x)
+            active = Track(id: t.identifier, zone: .top, start: y, anchor: x, armTime: nowT)
             Scrubber.shared.begin()   // snapshot playing position for 1s seeks
         } else {
             if debug { NSLog("VERGE no-arm x=%.3f y=%.3f edge=%.3f", x, y, edge) }
