@@ -1,0 +1,15 @@
+# build artifacts
+Verge.app/
+*.dmg
+*.temp.dmg
+tools/dmg-bg/*.png
+tools/dmg-bg/*.tiff
+.DS_Store
+*.icns
+
+# signing (never commit keys/certs)
+*.pem
+*.p12
+
+# skill cache
+.impeccable/
