@@ -1,0 +1,37 @@
+name: Update badges
+
+on:
+  schedule:
+    - cron: '0 6 * * *'      # daily 06:00 UTC
+  release:
+    types: [published]        # bump immediately when a release is cut
+  workflow_dispatch:          # manual "Run workflow" button
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Recompute badges from real data
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          TOTAL=$(gh api "repos/$REPO/releases" --jq '[.[].assets[].download_count] | add // 0')
+          LATEST=$(gh api "repos/$REPO/releases/latest" --jq .tag_name 2>/dev/null || echo "")
+          echo "downloads=$TOTAL  latest=$LATEST"
+
+          sed -i -E "s|badge/downloads-[0-9]+-FF2E7E|badge/downloads-${TOTAL}-FF2E7E|" README.md
+          [ -n "$LATEST" ] && sed -i -E "s|badge/release-v[0-9.]+-FF2E7E|badge/release-${LATEST}-FF2E7E|" README.md
+
+          if git diff --quiet README.md; then
+            echo "no change"; exit 0
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "chore: refresh badges (downloads ${TOTAL}, ${LATEST})"
+          git push
