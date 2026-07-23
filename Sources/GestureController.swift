@@ -113,7 +113,12 @@ final class GestureController {
             case .top:   nearEdge = y > (1 - dropEdge)
             }
             let cross = vertical ? x : y
-            if !nearEdge || abs(cross - tr.start) > wanderTol {
+            // Wander = cross-axis drift means a swipe, not an edge slide -> cancel.
+            // Only for L/R edges: sliding the TOP edge horizontally makes Y wobble
+            // naturally, and `nearEdge` (y>0.88) already keeps it pinned to the top,
+            // so the wander check just kills the top slide. Skip it there.
+            let wandered = tr.zone != .top && abs(cross - tr.start) > wanderTol
+            if !nearEdge || wandered {
                 if debug { NSLog("VERGE cancel: nearEdge=%d wander=%.3f", nearEdge ? 1 : 0, abs(cross - tr.start)) }
                 active = nil; return
             }

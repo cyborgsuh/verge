@@ -26,7 +26,12 @@ swiftc -O -o "$ICON_BUILD/makeicon" tools/MakeIcon.swift
 "$ICON_BUILD/makeicon" "$APP/Contents/Resources/Verge.icns"
 rm -rf "$ICON_BUILD"
 
-# ad-hoc sign so TCC (Accessibility) can pin a stable identity
-codesign --force --sign - "$APP" 2>/dev/null || true
-
-echo "Built $APP"
+# Sign with the stable self-signed identity if present so macOS keeps the
+# Accessibility grant across rebuilds/reboots/OS updates; ad-hoc otherwise.
+if security find-identity -p codesigning 2>/dev/null | grep -q "Verge Dev"; then
+    codesign --force --deep --sign "Verge Dev" "$APP"
+    echo "Built $APP (signed: Verge Dev)"
+else
+    codesign --force --sign - "$APP" 2>/dev/null || true
+    echo "Built $APP (ad-hoc — no 'Verge Dev' cert; grant will reset on rebuild)"
+fi

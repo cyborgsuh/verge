@@ -131,6 +131,12 @@ final class PreferencesController: NSObject, NSWindowDelegate {
         seg.selectedSegmentBezelColor = vergePink
         let sideRow = labeledRow("Left edge controls", control: seg)
 
+        let scrubSwitch = NSSwitch()
+        scrubSwitch.target = self
+        scrubSwitch.action = #selector(toggleScrub(_:))
+        scrubSwitch.state = boolDefault("topScrub", true) ? .on : .off
+        let scrubRow = labeledRow("Video scrub (top edge)", control: scrubSwitch)
+
         let loginSwitch = NSSwitch()
         loginSwitch.target = self
         loginSwitch.action = #selector(toggleLogin(_:))
@@ -140,6 +146,8 @@ final class PreferencesController: NSObject, NSWindowDelegate {
         addSection("General", readout: nil,
                    card: card([enableRow, sideRow,
                                caption("The right edge controls the other one."),
+                               scrubRow,
+                               caption("1s in native players. Browsers scrub in ~5s steps."),
                                loginRow]),
                    to: content, width: contentWidth)
 
@@ -189,6 +197,10 @@ final class PreferencesController: NSObject, NSWindowDelegate {
 
     @objc private func changeSide(_ s: NSSegmentedControl) {
         d.set(s.selectedSegment == 1, forKey: "swapSides")   // Volume selected = swapped
+    }
+
+    @objc private func toggleScrub(_ s: NSSwitch) {
+        d.set(s.state == .on, forKey: "topScrub")
     }
 
     @objc private func toggleLogin(_ s: NSSwitch) {
