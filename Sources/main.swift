@@ -92,6 +92,10 @@ if CommandLine.arguments.contains("--selftest") {
     precondition(notches(dy: 0.16, step: 0.05) == 3)
     precondition(notches(dy: -0.06, step: 0.05) == -1)
     precondition(notches(dy: -0.16, step: 0.05) == -3)
+    precondition(UpdateCheck.isNewer("v0.1.3", than: "0.1.2"))
+    precondition(UpdateCheck.isNewer("0.2.0", than: "0.1.9"))
+    precondition(!UpdateCheck.isNewer("v0.1.2", than: "0.1.2"))
+    precondition(!UpdateCheck.isNewer("0.1.1", than: "0.1.2"))
     print("selftest ok")
     exit(0)
 }

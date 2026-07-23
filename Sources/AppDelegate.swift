@@ -5,6 +5,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
     private let touch = TouchManager()
     private var keyMonitor: Any?
+    private var updateTag: String?   // set when a newer release exists
 
     func applicationDidFinishLaunching(_ note: Notification) {
         // authoritative defaults — gesture engine + Preferences read these keys
@@ -37,6 +38,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // menu-bar app has no main window — show Preferences so launching it
         // (Finder double-click / `open`) visibly opens something.
         PreferencesController.shared.show()
+        // nudge if a newer release is out (no auto-download, just a menu item)
+        UpdateCheck.run { [weak self] tag in
+            self?.updateTag = tag
+            self?.rebuildMenu()
+        }
     }
 
     // Double-clicking the app while it's already running -> reopen Preferences.
@@ -102,6 +108,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let swapSides = d.bool(forKey: "swapSides")
         let m = NSMenu()
 
+        if let tag = updateTag {
+            let up = NSMenuItem(title: "Update available: \(tag) ↗", action: #selector(openRelease), keyEquivalent: "")
+            up.target = self
+            m.addItem(up)
+            m.addItem(.separator())
+        }
+
         let en = NSMenuItem(title: "Enabled", action: #selector(toggleEnabled), keyEquivalent: "")
         en.state = enabled ? .on : .off; en.target = self
         m.addItem(en)
@@ -137,6 +150,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func openPreferences() { PreferencesController.shared.show() }
+
+    @objc private func openRelease() { NSWorkspace.shared.open(UpdateCheck.releaseURL) }
 
     @objc private func toggleEnabled() {
         let d = UserDefaults.standard
