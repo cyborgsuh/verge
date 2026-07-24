@@ -6,6 +6,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let touch = TouchManager()
     private var keyMonitor: Any?
     private var updateTag: String?   // set when a newer release exists
+    private var updateDMG: URL?      // download URL for that release's DMG
 
     func applicationDidFinishLaunching(_ note: Notification) {
         // authoritative defaults — gesture engine + Preferences read these keys
@@ -38,10 +39,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // menu-bar app has no main window — show Preferences so launching it
         // (Finder double-click / `open`) visibly opens something.
         PreferencesController.shared.show()
-        // nudge if a newer release is out (no auto-download, just a menu item)
-        UpdateCheck.run { [weak self] tag in
+        // check for a newer release; offer to download + install it
+        UpdateCheck.run { [weak self] tag, dmg in
             self?.updateTag = tag
+            self?.updateDMG = dmg
             self?.rebuildMenu()
+            self?.promptUpdate(tag)
         }
     }
 
@@ -109,7 +112,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let m = NSMenu()
 
         if let tag = updateTag {
-            let up = NSMenuItem(title: "Update available: \(tag) ↗", action: #selector(openRelease), keyEquivalent: "")
+            let up = NSMenuItem(title: "Install update \(tag)…", action: #selector(installUpdate), keyEquivalent: "")
             up.target = self
             m.addItem(up)
             m.addItem(.separator())
@@ -151,7 +154,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func openPreferences() { PreferencesController.shared.show() }
 
-    @objc private func openRelease() { NSWorkspace.shared.open(UpdateCheck.releaseURL) }
+    // Prompt once when an update is found; Install downloads + swaps + relaunches.
+    private func promptUpdate(_ tag: String) {
+        let a = NSAlert()
+        a.messageText = "Verge \(tag) is available"
+        a.informativeText = "Download and install it now? Verge will relaunch."
+        a.addButton(withTitle: "Install & Relaunch")
+        a.addButton(withTitle: "Later")
+        NSApp.activate(ignoringOtherApps: true)
+        if a.runModal() == .alertFirstButtonReturn { installUpdate() }
+    }
+
+    @objc private func installUpdate() {
+        guard let tag = updateTag, let dmg = updateDMG else { return }
+        Updater.installUpdate(tag: tag, dmgURL: dmg)
+    }
 
     @objc private func toggleEnabled() {
         let d = UserDefaults.standard

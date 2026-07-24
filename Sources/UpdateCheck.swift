@@ -7,9 +7,9 @@ enum UpdateCheck {
     static let repo = "cyborgsuh/verge"
     static var releaseURL: URL { URL(string: "https://github.com/\(repo)/releases/latest")! }
 
-    // Fetch latest tag; call `onNewer(tag)` on the main thread only if it beats
-    // the running version. Silent on any error (offline, rate-limited, etc.).
-    static func run(onNewer: @escaping (String) -> Void) {
+    // Fetch latest release; call `onNewer(tag, dmgURL)` on main only if it beats
+    // the running version and ships a Verge.dmg asset. Silent on any error.
+    static func run(onNewer: @escaping (String, URL) -> Void) {
         guard let api = URL(string: "https://api.github.com/repos/\(repo)/releases/latest") else { return }
         var req = URLRequest(url: api)
         req.setValue("Verge", forHTTPHeaderField: "User-Agent")   // GitHub API requires a UA
@@ -19,9 +19,12 @@ enum UpdateCheck {
                   let j = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                   let tag = j["tag_name"] as? String else { return }
             let current = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0"
-            if isNewer(tag, than: current) {
-                DispatchQueue.main.async { onNewer(tag) }
-            }
+            guard isNewer(tag, than: current) else { return }
+            let assets = j["assets"] as? [[String: Any]]
+            guard let dmg = assets?.first(where: { ($0["name"] as? String) == "Verge.dmg" }),
+                  let urlStr = dmg["browser_download_url"] as? String,
+                  let url = URL(string: urlStr) else { return }
+            DispatchQueue.main.async { onNewer(tag, url) }
         }.resume()
     }
 
