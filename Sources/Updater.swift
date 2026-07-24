@@ -33,7 +33,7 @@ enum Updater {
         MNT=$(hdiutil attach "\(dmgPath)" -nobrowse -noautoopen 2>/dev/null | grep -oE '/Volumes/[^\\t]+' | tail -1)
         NEW="$MNT/Verge.app"
         V=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$NEW/Contents/Info.plist" 2>/dev/null || echo "")
-        if [ "$V" = "\(version)" ] && codesign -dv "$NEW" 2>&1 | grep -q "Authority=Verge Dev"; then
+        if [ "$V" = "\(version)" ] && codesign -dvvv "$NEW" 2>&1 | grep -q "Authority=Verge Dev"; then
           TMP="\(appPath).new"
           rm -rf "$TMP"
           if cp -R "$NEW" "$TMP"; then     # stage a full copy, then swap atomically
