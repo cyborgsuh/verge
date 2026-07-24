@@ -9,7 +9,7 @@ Trackpad-edge control for volume, brightness, and video on macOS.
 
 <p>
   <img alt="release" src="https://img.shields.io/badge/release-v0.1.3-FF2E7E">
-  <img alt="downloads" src="https://img.shields.io/badge/downloads-17-FF2E7E">
+  <img alt="downloads" src="https://img.shields.io/badge/downloads-20-FF2E7E">
   <img alt="platform" src="https://img.shields.io/badge/macOS-13%2B-1C1C1E">
   <img alt="swift" src="https://img.shields.io/badge/built%20with-Swift-FF2E7E">
 </p>
