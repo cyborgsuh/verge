@@ -137,6 +137,14 @@ final class PreferencesController: NSObject, NSWindowDelegate {
         scrubSwitch.state = boolDefault("topScrub", true) ? .on : .off
         let scrubRow = labeledRow("Video scrub (top edge)", control: scrubSwitch)
 
+        let backlightPop = NSPopUpButton()
+        backlightPop.addItems(withTitles: ["Off", "⌘ Command", "⌥ Option", "⌃ Control", "⇧ Shift"])
+        backlightPop.selectItem(at: Self.backlightKeys.firstIndex(
+            of: d.string(forKey: "backlightModifier") ?? "command") ?? 1)
+        backlightPop.target = self
+        backlightPop.action = #selector(changeBacklightModifier(_:))
+        let backlightRow = labeledRow("Keyboard backlight", control: backlightPop)
+
         let loginSwitch = NSSwitch()
         loginSwitch.target = self
         loginSwitch.action = #selector(toggleLogin(_:))
@@ -148,6 +156,8 @@ final class PreferencesController: NSObject, NSWindowDelegate {
                                caption("The right edge controls the other one."),
                                scrubRow,
                                caption("1s in native players. Browsers scrub in ~5s steps."),
+                               backlightRow,
+                               caption("Hold this while sliding the brightness edge. Turns off keyboard auto-brightness."),
                                loginRow]),
                    to: content, width: contentWidth)
 
@@ -201,6 +211,14 @@ final class PreferencesController: NSObject, NSWindowDelegate {
 
     @objc private func toggleScrub(_ s: NSSwitch) {
         d.set(s.state == .on, forKey: "topScrub")
+    }
+
+    // Popup order must match this list (index 0 = "Off").
+    fileprivate static let backlightKeys = ["none", "command", "option", "control", "shift"]
+
+    @objc private func changeBacklightModifier(_ p: NSPopUpButton) {
+        let i = min(max(p.indexOfSelectedItem, 0), Self.backlightKeys.count - 1)
+        d.set(Self.backlightKeys[i], forKey: "backlightModifier")
     }
 
     @objc private func toggleLogin(_ s: NSSwitch) {

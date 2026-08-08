@@ -62,6 +62,21 @@ if CommandLine.arguments.contains("--testseek") {
     exit(0)
 }
 
+// Diagnostic: do ILLUMINATION media keys reach anything (e.g. a notch app's HUD)?
+//   ./Verge.app/Contents/MacOS/Verge --testillum
+if CommandLine.arguments.contains("--testillum") {
+    let ILLUMINATION_UP: Int32 = 21
+    print("AX trusted:", AXIsProcessTrusted())
+    let before = KeyboardBacklight.shared.level() ?? -1
+    print(String(format: "backlight before: %.3f", before))
+    for _ in 0..<4 { MediaKey.post(ILLUMINATION_UP); usleep(500_000) }
+    usleep(500_000)
+    let after = KeyboardBacklight.shared.level() ?? -1
+    print(String(format: "backlight after : %.3f  (changed: %@)", after,
+                 abs(after - before) > 0.001 ? "YES" : "no"))
+    exit(0)
+}
+
 // Diagnostic: measure the real reachable edge x on this trackpad.
 //   ./Verge.app/Contents/MacOS/Verge --probe   (then slide a finger along an edge)
 if CommandLine.arguments.contains("--probe") {

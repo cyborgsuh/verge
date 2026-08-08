@@ -27,8 +27,9 @@ A lightweight macOS menu-bar app — no window, no clutter. Slide a single finge
 | **Right** | Volume |
 | **Left** | Brightness |
 | **Top** | Video scrub (1s where the player allows, else 5s) |
+| **⌘ + brightness edge** | Keyboard backlight |
 
-Fine ~1.6% steps, taptic detent feedback, the cursor freezes while you slide, and it ignores scrolls, pinches, swipes, and typing — so it never triggers by accident.
+Hold a modifier (⌘ by default, configurable) while sliding the brightness edge to control the keyboard backlight instead. Fine ~1.6% steps, taptic detent feedback, the cursor freezes while you slide, and it ignores scrolls, pinches, swipes, and typing — so it never triggers by accident.
 
 ## Install
 

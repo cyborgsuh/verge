@@ -4,6 +4,8 @@ let NX_KEYTYPE_SOUND_UP: Int32 = 0
 let NX_KEYTYPE_SOUND_DOWN: Int32 = 1
 let NX_KEYTYPE_BRIGHTNESS_UP: Int32 = 2
 let NX_KEYTYPE_BRIGHTNESS_DOWN: Int32 = 3
+let NX_KEYTYPE_ILLUMINATION_UP: Int32 = 21     // keyboard backlight
+let NX_KEYTYPE_ILLUMINATION_DOWN: Int32 = 22
 
 // Synthesizes a hardware media key so the system (and Boring Notch) react.
 // fine: adds Shift+Option -> quarter steps (1/64 ≈ 1.6% per notch instead of 6.25%).

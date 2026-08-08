@@ -58,6 +58,19 @@ final class GestureController {
     var topScrub: Bool { (UserDefaults.standard.object(forKey: "topScrub") as? Bool) ?? true }
     var freezeCursor: Bool { (UserDefaults.standard.object(forKey: "freezeCursor") as? Bool) ?? true }
 
+    // Hold this modifier + slide the brightness edge -> keyboard backlight instead.
+    // "none" disables the whole feature. Read live so Preferences applies instantly.
+    var backlightModifier: NSEvent.ModifierFlags? {
+        switch (UserDefaults.standard.string(forKey: "backlightModifier") ?? "command") {
+        case "command": return .command
+        case "option":  return .option
+        case "control": return .control
+        case "shift":   return .shift
+        default:        return nil          // "none"
+        }
+    }
+    private let backlightStep: Float = 0.05  // per notch (no HUD, so keep it chunky enough to feel)
+
     func noteKeyPress() { lastKeyPress = CACurrentMediaTime() }
 
     // debug: VERGE_DEBUG=1 -> log raw touch frames (sampled) to Console
@@ -165,6 +178,21 @@ final class GestureController {
         }
         // default: left edge = brightness, right edge = volume. swapSides flips.
         let isVolume = (zone == .right) != swapSides
+
+        // Modifier held on the brightness edge -> keyboard backlight instead.
+        // Set directly (media keys can't drive the backlight on Apple Silicon), so
+        // no system HUD appears; the haptic tick is the feedback. Falls through to
+        // normal screen brightness if the private API is unavailable.
+        if !isVolume, let mod = backlightModifier,
+           NSEvent.modifierFlags.contains(mod), KeyboardBacklight.shared.available {
+            DispatchQueue.main.async {
+                // Media key first: lets the system / notch app draw the HUD itself.
+                KeyboardBacklight.shared.adjust(up: up, step: self.backlightStep)
+                Haptic.tick()
+            }
+            return
+        }
+
         let key: Int32 = isVolume ? (up ? NX_KEYTYPE_SOUND_UP : NX_KEYTYPE_SOUND_DOWN)
                                   : (up ? NX_KEYTYPE_BRIGHTNESS_UP : NX_KEYTYPE_BRIGHTNESS_DOWN)
         let fine = (UserDefaults.standard.object(forKey: "fineSteps") as? Bool) ?? true

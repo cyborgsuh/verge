@@ -19,6 +19,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             "topScrub": true,
             "freezeCursor": true,
             "scrubStep": 1.0,     // 1 second per notch
+            "backlightModifier": "command",   // hold + slide brightness edge = keyboard backlight
         ])
         // On very first launch, enable Open-at-Login by default. Once-only, so if
         // the user later turns it off via the menu it stays off.
