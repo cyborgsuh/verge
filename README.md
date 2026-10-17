@@ -35,8 +35,10 @@ Hold a modifier (⌘ by default, configurable) while sliding the brightness edge
 
 1. Download `Verge.dmg` from [Releases](https://github.com/cyborgsuh/verge/releases/latest).
 2. Open it, drag **Verge → Applications**.
-3. First launch: **right-click Verge → Open → Open** (it's not notarized, so macOS warns once).
-   - Or run: `xattr -dr com.apple.quarantine /Applications/Verge.app`
+3. First launch: macOS blocks it once (not notarized). Double-click, dismiss the warning, then
+   **System Settings → Privacy & Security → scroll down → Open Anyway**.
+   - Or skip the dance: `xattr -dr com.apple.quarantine /Applications/Verge.app`
+   - On macOS 14 and earlier, **right-click Verge → Open → Open** also works.
 4. Grant **Accessibility** when prompted (System Settings → Privacy & Security → Accessibility). Needed to post the volume/brightness keys.
 
 Opens at login automatically after first run — toggle it off in Preferences or the menu.

@@ -18,6 +18,12 @@ rm -rf "$BG_BUILD"
 STAGE="$(mktemp -d)/Verge"
 mkdir -p "$STAGE/.background"
 cp -R Verge.app "$STAGE/"
+# Re-sign the shipped copy ad-hoc. The local build is signed with the self-signed
+# "Verge Dev" cert (keeps the Accessibility grant across rebuilds), but that cert
+# chains to a CA no other Mac trusts, so Gatekeeper calls the download "damaged"
+# and offers only Move to Trash. Ad-hoc gets the normal "unverified developer"
+# prompt with an Open Anyway button instead.
+codesign --force --deep --sign - "$STAGE/Verge.app"
 ln -s /Applications "$STAGE/Applications"   # drag-to-install target
 tiffutil -cathidpicheck "$BG_DIR/background.png" "$BG_DIR/background@2x.png" \
     -out "$STAGE/.background/background.tiff"
