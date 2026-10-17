@@ -25,15 +25,19 @@ enum Updater {
         let version = tag.trimmingCharacters(in: CharacterSet(charactersIn: "v "))
         let appPath = Bundle.main.bundlePath   // e.g. /Applications/Verge.app
         // Helper runs AFTER we quit. It refuses to swap unless the new bundle is the
-        // expected version AND signed by "Verge Dev" — so a tampered/partial DMG
-        // can never replace a working install.
+        // expected version AND either signed by "Verge Dev" or ad-hoc signed as
+        // com.local.verge (release DMGs are ad-hoc from 0.1.7 so Gatekeeper offers
+        // Open Anyway) — so a partial or foreign DMG can never replace a working install.
         let script = """
         #!/bin/bash
         while pgrep -x Verge >/dev/null; do sleep 0.3; done
         MNT=$(hdiutil attach "\(dmgPath)" -nobrowse -noautoopen 2>/dev/null | grep -oE '/Volumes/[^\\t]+' | tail -1)
         NEW="$MNT/Verge.app"
         V=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$NEW/Contents/Info.plist" 2>/dev/null || echo "")
-        if [ "$V" = "\(version)" ] && codesign -dvvv "$NEW" 2>&1 | grep -q "Authority=Verge Dev"; then
+        SIG=$(codesign -dvvv "$NEW" 2>&1)
+        if [ "$V" = "\(version)" ] && codesign --verify --deep "$NEW" 2>/dev/null && \\
+           { echo "$SIG" | grep -q "Authority=Verge Dev" || \\
+             { echo "$SIG" | grep -q "Signature=adhoc" && echo "$SIG" | grep -q "Identifier=com.local.verge"; }; }; then
           TMP="\(appPath).new"
           rm -rf "$TMP"
           if cp -R "$NEW" "$TMP"; then     # stage a full copy, then swap atomically
